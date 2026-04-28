@@ -1,3 +1,7 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 import * as React from 'react';
 import { useState, useEffect } from 'react';
@@ -753,7 +757,7 @@ function ConsumptionCharts({ periods, residents }: { periods: BillingPeriod[], r
           <div className="p-2 bg-indigo-50 text-indigo-600 rounded-xl">
             <BarChart2 size={20} />
           </div>
-          <h3 className="font-bold text-slate-900">Zestawienie Zużycia i Ubytków</h3>
+          <h3 className="font-bold text-slate-900">Zestawienie Zużycia i Różnicy w licznikach</h3>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left">
@@ -762,8 +766,8 @@ function ConsumptionCharts({ periods, residents }: { periods: BillingPeriod[], r
                 <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Miesiąc</th>
                 <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Licznik Główny (m³)</th>
                 <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Suma Liczników Ind. (m³)</th>
-                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Ubytki (m³)</th>
-                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">% Ubytków</th>
+                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Różnica w licznikach (m³)</th>
+                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">% Różnicy</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -772,7 +776,10 @@ function ConsumptionCharts({ periods, residents }: { periods: BillingPeriod[], r
                   <td className="px-6 py-4 font-semibold text-slate-900">{data.month}</td>
                   <td className="px-6 py-4 text-slate-600 font-medium">{data.mainMeter.toFixed(3)}</td>
                   <td className="px-6 py-4 text-slate-600 font-medium">{data.individualTotal.toFixed(3)}</td>
-                  <td className="px-6 py-4 font-bold text-amber-600">{data.losses.toFixed(3)}</td>
+                  <td className={cn(
+                    "px-6 py-4 font-bold",
+                    data.losses > 0 ? "text-rose-600" : data.losses < 0 ? "text-emerald-600" : "text-slate-900"
+                  )}>{data.losses !== 0 ? Math.abs(data.losses).toFixed(3) : '0.000'}</td>
                   <td className="px-6 py-4">
                     <span className={cn(
                       "px-2 py-1 rounded-lg text-xs font-bold",
@@ -789,7 +796,10 @@ function ConsumptionCharts({ periods, residents }: { periods: BillingPeriod[], r
                 <td className="px-6 py-4 font-bold text-slate-900">SUMA (Cały Rok)</td>
                 <td className="px-6 py-4 font-bold text-slate-900">{totals.mainMeter.toFixed(3)}</td>
                 <td className="px-6 py-4 font-bold text-slate-900">{totals.individualTotal.toFixed(3)}</td>
-                <td className="px-6 py-4 font-bold text-amber-700">{totals.losses.toFixed(3)}</td>
+                <td className={cn(
+                  "px-6 py-4 font-bold",
+                  totals.losses > 0 ? "text-rose-600" : totals.losses < 0 ? "text-emerald-600" : "text-slate-900"
+                )}>{totals.losses !== 0 ? Math.abs(totals.losses).toFixed(3) : '0.000'}</td>
                 <td className="px-6 py-4">
                   <span className={cn(
                     "px-2 py-1 rounded-lg text-xs font-bold",
@@ -874,15 +884,15 @@ function Dashboard({ periods, residents, selectedYear, onSelectPeriod }: { perio
       const secondaryColor: [number, number, number] = [251, 191, 36]; // Amber-400
       const textColor: [number, number, number] = [69, 26, 3]; // Warm Brown
       
-      const totalMeterConsumption = residents.reduce((sum, res) => {
-        const r = readings.find(read => read.residentId === res.id);
-        return sum + (r?.meterConsumption || 0);
-      }, 0);
+    const totalMeterConsumption = residents.reduce((sum, res) => {
+      const r = readings.find(read => read.residentId === res.id);
+      return sum + (r?.meterConsumption || 0);
+    }, 0);
 
-      const totalMeters = residents.reduce((sum, res) => sum + (res.meters?.length || 0), 0);
-      const totalUbytki = period.totalConsumption - totalMeterConsumption;
-      const ubytkiPerMeter = totalMeters > 0 ? totalUbytki / totalMeters : 0;
-      const elecCostPerRes = residents.length > 0 ? (period.elecTotalInvoiceAmount / residents.length) : 0;
+    const totalMeters = residents.reduce((sum, res) => sum + (res.meters?.length || 0), 0);
+    const totalUbytki = period.totalConsumption - totalMeterConsumption; 
+    const ubytkiPerMeter = totalMeters > 0 ? totalUbytki / totalMeters : 0;
+    const elecCostPerRes = residents.length > 0 ? (period.elecTotalInvoiceAmount / residents.length) : 0;
       const elecConsPerRes = residents.length > 0 ? (period.elecTotalConsumption / residents.length) : 0;
 
       // Title
@@ -957,11 +967,14 @@ function Dashboard({ periods, residents, selectedYear, onSelectPeriod }: { perio
         const resWaterCost = resTotalCons * period.pricePerM3;
         const resTotalToPay = resWaterCost + period.renovationFundAtTime + elecCostPerRes;
 
+        // Visual format for "ubytki" (Różnica): absolute value for display
+        const displayWaterLoss = resWaterLossShare !== 0 ? Math.abs(resWaterLossShare).toFixed(3) : '0.000';
+
         return [
           res.apartmentNumber,
           res.name,
           resMeterCons.toFixed(3),
-          resWaterLossShare.toFixed(3),
+          displayWaterLoss,
           resTotalCons.toFixed(3),
           resWaterCost.toFixed(2),
           elecCostPerRes.toFixed(2),
@@ -974,7 +987,7 @@ function Dashboard({ periods, residents, selectedYear, onSelectPeriod }: { perio
         'RAZEM',
         '',
         totals.meterConsumption.toFixed(3),
-        totals.waterLossShare.toFixed(3),
+        Math.abs(totals.waterLossShare).toFixed(3),
         totals.totalConsumption.toFixed(3),
         totals.waterCost.toFixed(2),
         totals.elecCost.toFixed(2),
@@ -984,7 +997,7 @@ function Dashboard({ periods, residents, selectedYear, onSelectPeriod }: { perio
 
       autoTable(doc, {
         startY: 75,
-        head: [['Lokal', 'Mieszkaniec', 'Zużycie (m³)', 'Ubytki (m³)', 'Suma m³', 'Woda (zł)', 'Prąd (zł)', 'Fundusz (zł)', 'Suma (zł)']],
+        head: [['Lokal', 'Mieszkaniec', 'Zużycie (m³)', 'Różnica w licznikach (m³)', 'Suma m³', 'Woda (zł)', 'Prąd (zł)', 'Fundusz (zł)', 'Suma (zł)']],
         body: tableData,
         foot: footData,
         theme: 'grid',
@@ -1015,6 +1028,14 @@ function Dashboard({ periods, residents, selectedYear, onSelectPeriod }: { perio
           8: { halign: 'right', fontStyle: 'bold', fontSize: 9 }
         },
         didParseCell: (data) => {
+          if (data.column.index === 3 && (data.section === 'body' || data.section === 'foot')) {
+            const val = parseFloat(data.cell.text[0]);
+            if (val < 0) {
+              data.cell.styles.textColor = [225, 29, 72]; // Rose-600
+            } else if (val > 0) {
+              data.cell.styles.textColor = [5, 150, 105]; // Emerald-600
+            }
+          }
           if (data.column.index === 8) {
             data.cell.styles.fontStyle = 'bold';
             data.cell.styles.fontSize = 9;
@@ -1133,18 +1154,21 @@ function Dashboard({ periods, residents, selectedYear, onSelectPeriod }: { perio
           4: { halign: 'right' },
           5: { halign: 'right', fontStyle: 'bold' }
         },
+        didParseCell: (data) => {
+          if (data.column.index === 5 && data.section === 'body') {
+            const val = parseFloat(data.cell.text[0]);
+            if (val < -0.01) {
+              data.cell.styles.textColor = [225, 29, 72]; // Rose-600 (Debt)
+            } else if (val > 0.01) {
+              data.cell.styles.textColor = [5, 150, 105]; // Emerald-600 (Overpaid)
+            }
+          }
+        },
         styles: { 
           fontSize: 9,
           cellPadding: 3,
           overflow: 'linebreak',
           font: 'Roboto'
-        },
-        didParseCell: (data) => {
-          if (data.section === 'body' && data.column.index === 5) {
-            const val = parseFloat(data.cell.text[0]);
-            if (val < 0) data.cell.styles.textColor = [220, 38, 38]; // Red for debt
-            else if (val > 0) data.cell.styles.textColor = [5, 150, 105]; // Green for overpayment
-          }
         },
         alternateRowStyles: {
           fillColor: [255, 251, 235]
@@ -1482,75 +1506,79 @@ function ArrearsManager({ residents, billingPeriods, globalSettings }: { residen
               <tr>
                 <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Lokal</th>
                 <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Mieszkaniec</th>
-                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest text-right">Należności (suma)</th>
-                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest text-right">Wpłaty (suma)</th>
-                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest text-right">Saldo / Zaległość</th>
+                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest text-right">Suma należności</th>
+                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest text-right">Suma wpłat</th>
+                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest text-right">Saldo</th>
                 <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest text-right">Zwłoka (dni)</th>
                 <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest text-center">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {arrearsData.map(item => (
-                <tr key={item.id} className={cn(
-                  "hover:bg-slate-50 transition-colors",
-                  item.balance > 0.01 ? "bg-rose-50/20" : ""
-                )}>
-                  <td className="px-6 py-4">
-                    <span className="w-8 h-8 flex items-center justify-center bg-slate-100 rounded-lg text-sm font-bold text-slate-700">
-                      {item.apartmentNumber}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center justify-between group">
-                      <div>
-                        <div className="font-bold text-slate-900">{item.name}</div>
-                        <div className="text-xs text-slate-500">{item.email}</div>
+              {arrearsData.map(item => {
+                // displayBalance = -balance (debt becomes negative, overpayment becomes positive)
+                const displayBalance = -item.balance;
+                
+                return (
+                  <tr key={item.id} className={cn(
+                    "hover:bg-slate-50 transition-colors",
+                    item.balance > 0.01 ? "bg-rose-50/20" : ""
+                  )}>
+                    <td className="px-6 py-4">
+                      <span className="w-8 h-8 flex items-center justify-center bg-slate-100 rounded-lg text-sm font-bold text-slate-700">
+                        {item.apartmentNumber}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center justify-between group">
+                        <div>
+                          <div className="font-bold text-slate-900">{item.name}</div>
+                          <div className="text-xs text-slate-500">{item.email}</div>
+                        </div>
+                        {item.breakdown.length > 0 && (
+                          <button 
+                            onClick={() => setExpandedResidentId(expandedResidentId === item.id ? null : item.id)}
+                            className="p-1.5 rounded-lg hover:bg-slate-200 text-slate-400 hover:text-slate-600 transition-all"
+                            title={expandedResidentId === item.id ? "Zwiń szczegóły" : "Rozwiń szczegóły"}
+                          >
+                            {expandedResidentId === item.id ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                          </button>
+                        )}
                       </div>
-                      {item.breakdown.length > 0 && (
-                        <button 
-                          onClick={() => setExpandedResidentId(expandedResidentId === item.id ? null : item.id)}
-                          className="p-1.5 rounded-lg hover:bg-slate-200 text-slate-400 hover:text-slate-600 transition-all"
-                          title={expandedResidentId === item.id ? "Zwiń szczegóły" : "Rozwiń szczegóły"}
-                        >
-                          {expandedResidentId === item.id ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                        </button>
-                      )}
-                    </div>
-                    
-                    <AnimatePresence>
-                      {expandedResidentId === item.id && item.breakdown.length > 0 && (
-                        <motion.div 
-                          initial={{ height: 0, opacity: 0 }}
-                          animate={{ height: 'auto', opacity: 1 }}
-                          exit={{ height: 0, opacity: 0 }}
-                          transition={{ duration: 0.2 }}
-                          className="overflow-hidden"
-                        >
-                          <div className="mt-3 space-y-1.5 border-t border-slate-100 pt-3">
-                            {item.breakdown.map((b, idx) => (
-                              <div key={idx} className="text-[10px] flex flex-wrap gap-x-3 gap-y-0.5 text-slate-500 bg-slate-50/50 p-1.5 rounded-md border border-slate-100/50">
-                                <span className="font-bold text-slate-700 min-w-[50px]">{b.month}:</span>
-                                <span>Woda: {b.water.toFixed(2)}</span>
-                                <span>Prąd: {b.elec.toFixed(2)}</span>
-                                <span>FR: {b.fr.toFixed(2)}</span>
-                                <span className="font-bold text-slate-900 ml-auto">{b.billed.toFixed(2)} zł</span>
-                              </div>
-                            ))}
-                          </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </td>
-                  <td className="px-6 py-4 text-right font-mono text-slate-600">{item.totalBilled.toFixed(2)} zł</td>
-                  <td className="px-6 py-4 text-right font-mono text-emerald-600">{item.totalPaid.toFixed(2)} zł</td>
-                  <td className="px-6 py-4 text-right">
-                    <span className={cn(
-                      "text-lg font-black font-mono",
-                      item.balance > 0.01 ? "text-rose-600" : "text-emerald-600"
-                    )}>
-                      {item.balance.toFixed(2)} zł
-                    </span>
-                  </td>
+                      
+                      <AnimatePresence>
+                        {expandedResidentId === item.id && item.breakdown.length > 0 && (
+                          <motion.div 
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.2 }}
+                            className="overflow-hidden"
+                          >
+                            <div className="mt-3 space-y-1.5 border-t border-slate-100 pt-3">
+                              {item.breakdown.map((b, idx) => (
+                                <div key={idx} className="text-[10px] flex flex-wrap gap-x-3 gap-y-0.5 text-slate-500 bg-slate-50/50 p-1.5 rounded-md border border-slate-100/50">
+                                  <span className="font-bold text-slate-700 min-w-[50px]">{b.month}:</span>
+                                  <span>Woda: {b.water.toFixed(2)}</span>
+                                  <span>Prąd: {b.elec.toFixed(2)}</span>
+                                  <span>FR: {b.fr.toFixed(2)}</span>
+                                  <span className="font-bold text-slate-900 ml-auto">{b.billed.toFixed(2)} zł</span>
+                                </div>
+                              ))}
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </td>
+                    <td className="px-6 py-4 text-right font-mono text-slate-600">{item.totalBilled.toFixed(2)} zł</td>
+                    <td className="px-6 py-4 text-right font-mono text-emerald-600">{item.totalPaid.toFixed(2)} zł</td>
+                    <td className="px-6 py-4 text-right">
+                      <span className={cn(
+                        "text-lg font-black font-mono",
+                        item.balance > 0.01 ? "text-rose-600" : "text-emerald-600"
+                      )}>
+                        {displayBalance.toFixed(2)} zł
+                      </span>
+                    </td>
                   <td className="px-6 py-4 text-right">
                     {item.balance > 0.01 && item.maxDaysLate > 0 ? (
                       <div className="flex flex-col items-end">
@@ -1575,8 +1603,9 @@ function ArrearsManager({ residents, billingPeriods, globalSettings }: { residen
                     )}
                   </td>
                 </tr>
-              ))}
-            </tbody>
+              );
+            })}
+          </tbody>
           </table>
         </div>
       </div>
@@ -2343,7 +2372,7 @@ function ResidentManager({ residents, billingPeriods, selectedYear, globalSettin
       
       autoTable(docPDF, {
         startY: 55,
-        head: [['Miesiąc', 'Liczniki (m³)', 'Ubytki (m³)', 'Suma (m³)', 'Woda (zł)', 'Prąd (zł)', 'Fundusz (zł)', 'Wpłata (zł)']],
+        head: [['Miesiąc', 'Liczniki (m³)', 'Różnica w licznikach (m³)', 'Suma (m³)', 'Woda (zł)', 'Prąd (zł)', 'Fundusz (zł)', 'Wpłata (zł)']],
         body: yearReadings.map(r => {
           const p = billingPeriods.find(period => period.id === r.billingPeriodId);
           const fund = r.repairFund || p?.renovationFundAtTime || globalSettings?.renovationFund || 0;
@@ -2351,7 +2380,7 @@ function ResidentManager({ residents, billingPeriods, selectedYear, globalSettin
           return [
             p ? format(parseISO(p.month + '-01'), 'LLLL', { locale: pl }) : '?',
             (r.meterConsumption || 0).toFixed(3),
-            (r.waterLossShare || 0).toFixed(3),
+            Math.abs(r.waterLossShare || 0).toFixed(3),
             (r.totalConsumption || 0).toFixed(3),
             (r.waterCost || 0).toFixed(2),
             (r.elecCost || 0).toFixed(2),
@@ -2409,7 +2438,7 @@ function ResidentManager({ residents, billingPeriods, selectedYear, globalSettin
       docPDF.setFontSize(10);
       docPDF.setTextColor(100, 116, 139);
       docPDF.text(`- zużycie z liczników: ${totalMeterConsumption.toFixed(3)} m³`, 18, finalYTable + 36);
-      docPDF.text(`- udział w ubytkach: ${totalWaterLoss.toFixed(3)} m³`, 18, finalYTable + 41);
+      docPDF.text(`- różnica w licznikach: ${Math.abs(totalWaterLoss).toFixed(3)} m³`, 18, finalYTable + 41);
       docPDF.text(`- suma zużycia: ${totalWaterConsumption.toFixed(3)} m³`, 18, finalYTable + 46);
       
       docPDF.setFontSize(12);
@@ -2428,7 +2457,7 @@ function ResidentManager({ residents, billingPeriods, selectedYear, globalSettin
       docPDF.text(`SUMA WPŁAT:`, 14, finalYTable + 80);
       docPDF.text(`${totalPayments.toFixed(2)} zł`, 180, finalYTable + 80, { align: 'right' });
 
-      const isOverpaid = balance < 0;
+      const isOverpaid = balance < -0.01;
       const balanceText = isOverpaid ? 'NADPŁATA (do zwrotu/rozliczenia)' : 'NIEDOPŁATA (do zapłaty)';
       const color = isOverpaid ? [5, 150, 105] : [225, 29, 72];
 
@@ -2436,7 +2465,7 @@ function ResidentManager({ residents, billingPeriods, selectedYear, globalSettin
       docPDF.setFont('Roboto', 'bold');
       docPDF.setTextColor(color[0], color[1], color[2]);
       docPDF.text(`${balanceText}:`, 14, finalYTable + 95);
-      docPDF.text(`${Math.abs(balance).toFixed(2)} zł`, 180, finalYTable + 95, { align: 'right' });
+      docPDF.text(`${(-balance).toFixed(2)} zł`, 180, finalYTable + 95, { align: 'right' });
 
       docPDF.save(`raport-roczny-${resident.apartmentNumber}-${resident.name}-${currentYear}.pdf`);
     } catch (error) {
@@ -3144,7 +3173,7 @@ function PeriodDetail({ periodId, residents, billingPeriods, globalSettings, onB
 
     const message = `Lokal ${resident.apartmentNumber} - ${resident.name}\n` +
       `Rozliczenie mediów - ${format(parseISO(period.month + '-01'), 'LLLL yyyy', { locale: pl })}\n` +
-      `Woda i ubytki: ${resTotalConsumption.toFixed(3)} m³\n` +
+      `Woda i różnica w licznikach: ${resTotalConsumption.toFixed(3)} m³\n` +
       `Kwota za wodę: ${resWaterCost.toFixed(2)} zł\n` +
       `Kwota za prąd: ${resElecCost.toFixed(2)} zł\n` +
       `Fundusz remontowy: ${period.renovationFundAtTime.toFixed(2)} zł\n` +
@@ -3452,7 +3481,7 @@ function PeriodDetail({ periodId, residents, billingPeriods, globalSettings, onB
                 {residents.length > readings.length && (
                   <div className="bg-rose-50 border border-rose-200 text-rose-800 px-4 py-3 rounded-xl flex items-start gap-3 text-sm">
                     <AlertCircle size={18} className="shrink-0 mt-0.5" />
-                    <p>Brakuje odczytów dla {residents.length - readings.length} lokali. Straty wody (ubytki) są obecnie zawyżone.</p>
+                    <p>Brakuje odczytów dla {residents.length - readings.length} lokali. Statystyki zużycia (różnica) mogą być obecnie niedokładne.</p>
                   </div>
                 )}
                 <div className="grid grid-cols-2 gap-6">
@@ -3473,15 +3502,15 @@ function PeriodDetail({ periodId, residents, billingPeriods, globalSettings, onB
                     <p className="text-2xl font-bold text-slate-900">{totalResidentsMeterConsumption.toFixed(3)} m³</p>
                   </div>
                   <div>
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Ubytki</p>
-                    <p className={`text-2xl font-bold ${ubytki > 0 ? 'text-amber-600' : ubytki < 0 ? 'text-emerald-600' : 'text-slate-900'}`}>
-                      {ubytki.toFixed(3)} m³
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Różnica w licznikach</p>
+                    <p className={`text-2xl font-bold ${ubytki > 0 ? 'text-rose-600' : ubytki < 0 ? 'text-emerald-600' : 'text-slate-900'}`}>
+                      {ubytki !== 0 ? Math.abs(ubytki).toFixed(3) : '0.000'} m³
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Ubytki na licznik</p>
-                    <p className={`text-2xl font-bold ${ubytki > 0 ? 'text-amber-600' : ubytki < 0 ? 'text-emerald-600' : 'text-slate-900'}`}>
-                      {ubytkiPerMeter.toFixed(3)} m³
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Różnica na licznik</p>
+                    <p className={`text-2xl font-bold ${ubytki > 0 ? 'text-rose-600' : ubytki < 0 ? 'text-emerald-600' : 'text-slate-900'}`}>
+                      {ubytkiPerMeter !== 0 ? Math.abs(ubytkiPerMeter).toFixed(3) : '0.000'} m³
                     </p>
                   </div>
                   <div>
@@ -3534,7 +3563,7 @@ function PeriodDetail({ periodId, residents, billingPeriods, globalSettings, onB
                 <th className="sticky left-0 z-20 bg-slate-50 px-6 py-4 font-bold text-slate-700 text-xs uppercase tracking-wider border-r border-slate-200">Lokal / Mieszkaniec</th>
                 <th className="px-6 py-4 font-bold text-slate-700 text-xs uppercase tracking-wider">Liczniki (Początek / Koniec / Zużycie)</th>
                 <th className="px-6 py-4 font-bold text-slate-700 text-xs uppercase tracking-wider">Zużycie z liczników</th>
-                <th className="px-6 py-4 font-bold text-slate-700 text-xs uppercase tracking-wider">Ubytki</th>
+                <th className="px-6 py-4 font-bold text-slate-700 text-xs uppercase tracking-wider">Różnica w licznikach</th>
                 <th className="px-6 py-4 font-bold text-slate-700 text-xs uppercase tracking-wider">Suma Zużycia</th>
                 <th className="px-6 py-4 font-bold text-slate-700 text-xs uppercase tracking-wider">Woda</th>
                 <th className="px-6 py-4 font-bold text-slate-700 text-xs uppercase tracking-wider">Prąd</th>
@@ -3605,8 +3634,8 @@ function PeriodDetail({ periodId, residents, billingPeriods, globalSettings, onB
                     <td className="px-6 py-4 text-slate-900 font-semibold">
                       {reading?.meterConsumption?.toFixed(3) ?? '0.000'} m³
                     </td>
-                    <td className={`px-6 py-4 font-semibold ${resWaterLossShare > 0 ? 'text-amber-600' : resWaterLossShare < 0 ? 'text-emerald-600' : 'text-slate-900'}`}>
-                      {resWaterLossShare.toFixed(3)} m³
+                    <td className={`px-6 py-4 font-semibold ${resWaterLossShare > 0 ? 'text-rose-600' : resWaterLossShare < 0 ? 'text-emerald-600' : 'text-slate-900'}`}>
+                      {Math.abs(resWaterLossShare).toFixed(3)} m³
                     </td>
                     <td className="px-6 py-4 text-slate-900 font-bold text-lg">
                       {((reading?.meterConsumption ?? 0) + resWaterLossShare).toFixed(3)} m³
@@ -3681,8 +3710,11 @@ function PeriodDetail({ periodId, residents, billingPeriods, globalSettings, onB
                 <td className="px-6 py-4 font-bold text-slate-900">
                   {totalResidentsMeterConsumption.toFixed(3)} m³
                 </td>
-                <td className="px-6 py-4 font-bold text-amber-600">
-                  {ubytki.toFixed(3)} m³
+                <td className={cn(
+                  "px-6 py-4 font-bold",
+                  ubytki > 0 ? "text-rose-600" : ubytki < 0 ? "text-emerald-600" : "text-slate-900"
+                )}>
+                  {Math.abs(ubytki).toFixed(3)} m³
                 </td>
                 <td className="px-6 py-4 font-bold text-slate-900 text-lg">
                   {period.totalConsumption.toFixed(3)} m³
