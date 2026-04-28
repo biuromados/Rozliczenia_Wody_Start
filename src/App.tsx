@@ -2380,7 +2380,11 @@ function ResidentManager({ residents, billingPeriods, selectedYear, globalSettin
           return [
             p ? format(parseISO(p.month + '-01'), 'LLLL', { locale: pl }) : '?',
             (r.meterConsumption || 0).toFixed(3),
-            Math.abs(r.waterLossShare || 0).toFixed(3),
+            (r.waterLossShare || 0) > 0 
+              ? `+${Math.abs(r.waterLossShare || 0).toFixed(3)}` 
+              : (r.waterLossShare || 0) < 0 
+                ? `-${Math.abs(r.waterLossShare || 0).toFixed(3)}` 
+                : '0.000',
             (r.totalConsumption || 0).toFixed(3),
             (r.waterCost || 0).toFixed(2),
             (r.elecCost || 0).toFixed(2),
@@ -2390,7 +2394,17 @@ function ResidentManager({ residents, billingPeriods, selectedYear, globalSettin
         }),
         theme: 'striped',
         headStyles: { fillColor: [79, 70, 229], font: 'Roboto', fontStyle: 'bold' },
-        styles: { font: 'Roboto' }
+        styles: { font: 'Roboto' },
+        didParseCell: (data) => {
+          if (data.column.index === 2 && data.section === 'body') {
+            const text = data.cell.text[0];
+            if (text.startsWith('+')) {
+              data.cell.styles.textColor = [225, 29, 72]; // Red
+            } else if (text.startsWith('-')) {
+              data.cell.styles.textColor = [5, 150, 105]; // Green
+            }
+          }
+        }
       });
 
       const finalYTable = (docPDF as any).lastAutoTable.finalY || 55;
@@ -2438,7 +2452,13 @@ function ResidentManager({ residents, billingPeriods, selectedYear, globalSettin
       docPDF.setFontSize(10);
       docPDF.setTextColor(100, 116, 139);
       docPDF.text(`- zużycie z liczników: ${totalMeterConsumption.toFixed(3)} m³`, 18, finalYTable + 36);
-      docPDF.text(`- różnica w licznikach: ${Math.abs(totalWaterLoss).toFixed(3)} m³`, 18, finalYTable + 41);
+      
+      const lossSign = totalWaterLoss > 0 ? '+' : (totalWaterLoss < 0 ? '-' : '');
+      const lossColor = totalWaterLoss > 0 ? [225, 29, 72] : (totalWaterLoss < 0 ? [5, 150, 105] : [100, 116, 139]);
+      docPDF.setTextColor(lossColor[0], lossColor[1], lossColor[2]);
+      docPDF.text(`- różnica w licznikach: ${lossSign}${Math.abs(totalWaterLoss).toFixed(3)} m³`, 18, finalYTable + 41);
+      
+      docPDF.setTextColor(100, 116, 139);
       docPDF.text(`- suma zużycia: ${totalWaterConsumption.toFixed(3)} m³`, 18, finalYTable + 46);
       
       docPDF.setFontSize(12);
