@@ -546,12 +546,6 @@ function ConsumptionCharts({ periods, residents }: { periods: BillingPeriod[], r
     electricity: p.elecTotalConsumption || 0
   }));
 
-  const priceData = sortedPeriods.map(p => ({
-    name: format(parseISO(p.month + '-01'), 'MMM yy', { locale: pl }),
-    waterPrice: p.pricePerM3 || 0,
-    elecPrice: p.elecPricePerKWh || 0
-  }));
-
   const residentData = sortedPeriods.map(p => {
     const r = readings.find(read => read.billingPeriodId === p.id && read.residentId === selectedResidentId);
     return {
@@ -691,66 +685,6 @@ function ConsumptionCharts({ periods, residents }: { periods: BillingPeriod[], r
         </div>
       </div>
 
-      {/* Price History Chart */}
-      <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
-        <div className="flex items-center gap-2 mb-6">
-          <div className="p-2 bg-amber-50 text-amber-600 rounded-xl">
-            <BarChart2 size={20} />
-          </div>
-          <h3 className="font-bold text-slate-900">Historia Cen Jednostkowych</h3>
-        </div>
-        <div className="h-80 w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={priceData}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-              <XAxis 
-                dataKey="name" 
-                axisLine={false} 
-                tickLine={false} 
-                tick={{fill: '#64748b', fontSize: 12}} 
-                dy={10}
-              />
-              <YAxis 
-                yId="left"
-                axisLine={false} 
-                tickLine={false} 
-                tick={{fill: '#4f46e5', fontSize: 12}}
-                tickFormatter={(value) => `${value.toFixed(2)} zł`}
-                label={{ value: 'Woda (zł/m³)', angle: -90, position: 'insideLeft', fill: '#4f46e5', fontSize: 12 }}
-              />
-              <YAxis 
-                yId="right"
-                orientation="right"
-                axisLine={false} 
-                tickLine={false} 
-                tick={{fill: '#f59e0b', fontSize: 12}}
-                tickFormatter={(value) => `${value.toFixed(2)} zł`}
-                label={{ value: 'Prąd (zł/kWh)', angle: 90, position: 'insideRight', fill: '#f59e0b', fontSize: 12 }}
-              />
-              <Tooltip 
-                contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-                formatter={(value: number) => [`${value.toFixed(2)} zł`]}
-              />
-              <Legend verticalAlign="top" height={36}/>
-              <Bar 
-                yId="left"
-                dataKey="waterPrice" 
-                name="Cena Wody (zł/m³)"
-                fill="#4f46e5" 
-                radius={[4, 4, 0, 0]}
-              />
-              <Bar 
-                yId="right"
-                dataKey="elecPrice" 
-                name="Cena Prądu (zł/kWh)"
-                fill="#f59e0b" 
-                radius={[4, 4, 0, 0]}
-              />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-
       {/* Monthly Summary Table */}
       <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="p-6 border-b border-slate-100 flex items-center gap-2">
@@ -759,11 +693,11 @@ function ConsumptionCharts({ periods, residents }: { periods: BillingPeriod[], r
           </div>
           <h3 className="font-bold text-slate-900">Zestawienie Zużycia i Różnicy w licznikach</h3>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left">
+        <div className="w-full overflow-x-auto relative shadow-sm rounded-xl">
+          <table className="w-full text-left min-w-[900px] border-collapse">
             <thead>
               <tr className="bg-slate-50">
-                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Miesiąc</th>
+                <th className="sticky left-0 z-20 bg-slate-50 border-r border-slate-200 px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Miesiąc</th>
                 <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Licznik Główny (m³)</th>
                 <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Suma Liczników Ind. (m³)</th>
                 <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Różnica w licznikach (m³)</th>
@@ -772,8 +706,8 @@ function ConsumptionCharts({ periods, residents }: { periods: BillingPeriod[], r
             </thead>
             <tbody className="divide-y divide-slate-100">
               {summaryData.map((data, idx) => (
-                <tr key={idx} className="hover:bg-slate-50 transition-colors">
-                  <td className="px-6 py-4 font-semibold text-slate-900">{data.month}</td>
+                <tr key={idx} className="hover:bg-slate-50 transition-colors group">
+                  <td className="sticky left-0 z-10 bg-white border-r border-slate-200 group-hover:bg-slate-50 px-6 py-4 font-semibold text-slate-900 transition-colors">{data.month}</td>
                   <td className="px-6 py-4 text-slate-600 font-medium">{data.mainMeter.toFixed(3)}</td>
                   <td className="px-6 py-4 text-slate-600 font-medium">{data.individualTotal.toFixed(3)}</td>
                   <td className={cn(
@@ -792,8 +726,8 @@ function ConsumptionCharts({ periods, residents }: { periods: BillingPeriod[], r
               ))}
             </tbody>
             <tfoot className="bg-slate-100 border-t-2 border-slate-200">
-              <tr>
-                <td className="px-6 py-4 font-bold text-slate-900">SUMA (Cały Rok)</td>
+              <tr className="group">
+                <td className="sticky left-0 z-10 bg-slate-100 border-r border-slate-200 px-6 py-4 font-bold text-slate-900 group-hover:bg-slate-50 transition-colors">SUMA (Cały Rok)</td>
                 <td className="px-6 py-4 font-bold text-slate-900">{totals.mainMeter.toFixed(3)}</td>
                 <td className="px-6 py-4 font-bold text-slate-900">{totals.individualTotal.toFixed(3)}</td>
                 <td className={cn(
@@ -1500,11 +1434,11 @@ function ArrearsManager({ residents, billingPeriods, globalSettings }: { residen
       </div>
 
       <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left">
+        <div className="w-full overflow-x-auto relative shadow-sm rounded-xl">
+          <table className="w-full text-left min-w-[900px] border-collapse">
             <thead className="bg-slate-50 border-b border-slate-200">
               <tr>
-                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Lokal</th>
+                <th className="sticky left-0 z-20 bg-slate-50 border-r border-slate-200 px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Lokal</th>
                 <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Mieszkaniec</th>
                 <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest text-right">Suma należności</th>
                 <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest text-right">Suma wpłat</th>
@@ -1520,10 +1454,10 @@ function ArrearsManager({ residents, billingPeriods, globalSettings }: { residen
                 
                 return (
                   <tr key={item.id} className={cn(
-                    "hover:bg-slate-50 transition-colors",
+                    "hover:bg-slate-50 transition-colors group",
                     item.balance > 0.01 ? "bg-rose-50/20" : ""
                   )}>
-                    <td className="px-6 py-4">
+                    <td className="sticky left-0 z-10 bg-white border-r border-slate-200 group-hover:bg-slate-50 px-6 py-4 transition-colors">
                       <span className="w-8 h-8 flex items-center justify-center bg-slate-100 rounded-lg text-sm font-bold text-slate-700">
                         {item.apartmentNumber}
                       </span>
@@ -1988,11 +1922,11 @@ function FinanceManager({ residents, globalSettings, billingPeriods }: { residen
             </h2>
           </div>
           <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left">
+            <div className="w-full overflow-x-auto relative shadow-sm rounded-xl">
+              <table className="w-full text-left min-w-[900px] border-collapse">
                 <thead className="bg-slate-50 border-bottom border-slate-200">
                   <tr>
-                    <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Data</th>
+                    <th className="sticky left-0 z-20 bg-slate-50 border-r border-slate-200 px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Data</th>
                     <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Nazwa / Od kogo</th>
                     <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Opis</th>
                     <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">Kwota</th>
@@ -2003,10 +1937,10 @@ function FinanceManager({ residents, globalSettings, billingPeriods }: { residen
                     const isLate = isLatePayment(entry);
                     return (
                       <tr key={entry.id} className={cn(
-                        "hover:bg-slate-50 transition-colors",
+                        "hover:bg-slate-50 transition-colors group",
                         isLate && "bg-orange-50 hover:bg-orange-100"
                       )}>
-                        <td className="px-6 py-4 text-sm text-slate-600">
+                        <td className="sticky left-0 z-10 bg-white border-r border-slate-200 group-hover:bg-slate-50 px-6 py-4 text-sm text-slate-600 transition-colors">
                           <div className="flex items-center gap-2">
                             {entry.date}
                             {isLate && (
@@ -2040,11 +1974,11 @@ function FinanceManager({ residents, globalSettings, billingPeriods }: { residen
             </h2>
           </div>
           <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left">
+            <div className="w-full overflow-x-auto relative shadow-sm rounded-xl">
+              <table className="w-full text-left min-w-[900px] border-collapse">
                 <thead className="bg-slate-50 border-bottom border-slate-200">
                   <tr>
-                    <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Data</th>
+                    <th className="sticky left-0 z-20 bg-slate-50 border-r border-slate-200 px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Data</th>
                     <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Nazwa / Dla kogo</th>
                     <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Opis</th>
                     <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">Kwota</th>
@@ -2053,8 +1987,8 @@ function FinanceManager({ residents, globalSettings, billingPeriods }: { residen
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {allEntries.filter(e => e.type === 'expense').map(entry => (
-                    <tr key={entry.id} className="hover:bg-slate-50 transition-colors">
-                      <td className="px-6 py-4 text-sm text-slate-600">{entry.date}</td>
+                    <tr key={entry.id} className="hover:bg-slate-50 transition-colors group">
+                      <td className="sticky left-0 z-10 bg-white border-r border-slate-200 group-hover:bg-slate-50 px-6 py-4 text-sm text-slate-600 transition-colors">{entry.date}</td>
                       <td className="px-6 py-4">
                         <div className="text-sm font-bold text-slate-900">{entry.name}</div>
                         <div className="text-xs text-slate-500">{entry.person}</div>
@@ -2525,21 +2459,22 @@ function ResidentManager({ residents, billingPeriods, selectedYear, globalSettin
       </div>
 
       <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="bg-slate-50 border-b border-slate-200">
-              <th className="px-6 py-4 font-bold text-slate-700 text-sm uppercase tracking-wider">Lokal</th>
-              <th className="px-6 py-4 font-bold text-slate-700 text-sm uppercase tracking-wider">Nazwisko</th>
-              <th className="px-6 py-4 font-bold text-slate-700 text-sm uppercase tracking-wider">Email / Telefon</th>
-              <th className="px-6 py-4 font-bold text-slate-700 text-sm uppercase tracking-wider">Liczniki (Stan Początkowy)</th>
-              <th className="px-6 py-4 font-bold text-slate-700 text-sm uppercase tracking-wider text-right">Akcje</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {[...residents].sort((a, b) => a.apartmentNumber.localeCompare(b.apartmentNumber, undefined, { numeric: true, sensitivity: 'base' })).map(resident => (
-              <tr key={resident.id} className="hover:bg-slate-50 transition-colors group">
-                <td className="px-6 py-4 font-bold text-indigo-600">{resident.apartmentNumber}</td>
-                <td className="px-6 py-4 font-semibold text-slate-900">{resident.name}</td>
+        <div className="w-full overflow-x-auto relative shadow-sm rounded-xl">
+          <table className="w-full text-left border-collapse min-w-[900px]">
+            <thead>
+              <tr className="bg-slate-50 border-b border-slate-200">
+                <th className="sticky left-0 z-20 bg-slate-50 border-r border-slate-200 px-6 py-4 font-bold text-slate-700 text-sm uppercase tracking-wider">Lokal</th>
+                <th className="px-6 py-4 font-bold text-slate-700 text-sm uppercase tracking-wider">Nazwisko</th>
+                <th className="px-6 py-4 font-bold text-slate-700 text-sm uppercase tracking-wider">Email / Telefon</th>
+                <th className="px-6 py-4 font-bold text-slate-700 text-sm uppercase tracking-wider">Liczniki (Stan Początkowy)</th>
+                <th className="px-6 py-4 font-bold text-slate-700 text-sm uppercase tracking-wider text-right">Akcje</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {[...residents].sort((a, b) => a.apartmentNumber.localeCompare(b.apartmentNumber, undefined, { numeric: true, sensitivity: 'base' })).map(resident => (
+                <tr key={resident.id} className="hover:bg-slate-50 transition-colors group">
+                  <td className="sticky left-0 z-10 bg-white border-r border-slate-200 group-hover:bg-slate-50 px-6 py-4 font-bold text-indigo-600 transition-colors">{resident.apartmentNumber}</td>
+                  <td className="px-6 py-4 font-semibold text-slate-900">{resident.name}</td>
                 <td className="px-6 py-4">
                   <div className="text-sm text-slate-600">{resident.email}</div>
                   <div className="text-xs text-slate-400">{resident.phone}</div>
@@ -2559,7 +2494,7 @@ function ResidentManager({ residents, billingPeriods, selectedYear, globalSettin
                   </div>
                 </td>
                 <td className="px-6 py-4 text-right">
-                  <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="flex items-center justify-end gap-2 transition-opacity">
                     <button 
                       onClick={() => generateResidentReport(resident)}
                       disabled={isGenerating === resident.id}
@@ -2602,6 +2537,7 @@ function ResidentManager({ residents, billingPeriods, selectedYear, globalSettin
             ))}
           </tbody>
         </table>
+      </div>
         {residents.length === 0 && (
           <div className="p-12 text-center text-slate-500 italic">Brak mieszkańców w systemie.</div>
         )}
@@ -3576,11 +3512,11 @@ function PeriodDetail({ periodId, residents, billingPeriods, globalSettings, onB
         <div className="p-6 border-b border-slate-100 bg-slate-50/50">
           <h2 className="text-lg font-bold text-slate-900">Stany liczników indywidualnych</h2>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[1000px]">
+        <div className="w-full overflow-x-auto relative shadow-sm rounded-xl">
+          <table className="w-full text-left border-collapse min-w-[900px]">
             <thead>
               <tr className="bg-slate-50/50 border-b border-slate-200">
-                <th className="sticky left-0 z-20 bg-slate-50 px-6 py-4 font-bold text-slate-700 text-xs uppercase tracking-wider border-r border-slate-200">Lokal / Mieszkaniec</th>
+                <th className="sticky left-0 z-20 bg-slate-50 border-r border-slate-200 px-6 py-4 font-bold text-slate-700 text-xs uppercase tracking-wider">Lokal / Mieszkaniec</th>
                 <th className="px-6 py-4 font-bold text-slate-700 text-xs uppercase tracking-wider">Liczniki (Początek / Koniec / Zużycie)</th>
                 <th className="px-6 py-4 font-bold text-slate-700 text-xs uppercase tracking-wider">Zużycie z liczników</th>
                 <th className="px-6 py-4 font-bold text-slate-700 text-xs uppercase tracking-wider">Różnica w licznikach</th>
